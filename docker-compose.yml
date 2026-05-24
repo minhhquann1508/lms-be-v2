@@ -1,15 +1,15 @@
 x-backend-environment: &backend-environment
   NODE_ENV: production
-  PORT: "8000"
+  PORT: '8000'
   BACKEND_URL: ${BACKEND_URL}
   FRONTEND_URL: ${FRONTEND_URL}
   OAUTH_STATE_SECRET: ${OAUTH_STATE_SECRET}
   DATABASE_HOST: postgres
-  DATABASE_PORT: "5432"
+  DATABASE_PORT: '5432'
   DATABASE_USERNAME: ${DATABASE_USERNAME}
   DATABASE_PASSWORD: ${DATABASE_PASSWORD}
   DATABASE_NAME: ${DATABASE_NAME}
-  DB_SYNCHRONIZE: "false"
+  DB_SYNCHRONIZE: 'false'
   PASSWORD_HASH_SALT: ${PASSWORD_HASH_SALT}
   JWT_SECRET: ${JWT_SECRET}
   JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
@@ -44,9 +44,10 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - '${POSTGRES_PORT:-5432}:5432'
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USERNAME} -d ${DATABASE_NAME}"]
+      test:
+        ['CMD-SHELL', 'pg_isready -U ${DATABASE_USERNAME} -d ${DATABASE_NAME}']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -55,12 +56,28 @@ services:
     image: ghcr.io/minhhquann1508/lms-be-v2:${IMAGE_TAG:-latest}
     build: *backend-build
     container_name: lms-migrate
-    restart: "no"
+    restart: 'no'
     depends_on:
       postgres:
         condition: service_healthy
     environment: *backend-environment
-    command: ["npm", "run", "migration:run:prod"]
+    command: ['npm', 'run', 'migration:run:prod']
+
+  seed:
+    image: ghcr.io/minhhquann1508/lms-be-v2:${IMAGE_TAG:-latest}
+    build: *backend-build
+    container_name: lms-seed
+    restart: 'no'
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      <<: *backend-environment
+      SEED_USER_PASSWORD: ${SEED_USER_PASSWORD:-1508}
+      SEED_RESET_USER_PASSWORD: ${SEED_RESET_USER_PASSWORD:-false}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-super.admin@gmail.com}
+      SEED_TEST_USER_EMAIL: ${SEED_TEST_USER_EMAIL:-user.testing@gmail.com}
+    command: ['npm', 'run', 'seed:prod']
 
   backend:
     image: ghcr.io/minhhquann1508/lms-be-v2:${IMAGE_TAG:-latest}
@@ -68,11 +85,11 @@ services:
     container_name: lms-be-v2
     restart: unless-stopped
     depends_on:
-      migrate:
+      seed:
         condition: service_completed_successfully
     environment: *backend-environment
     ports:
-      - "${BACKEND_PORT:-8000}:8000"
+      - '${BACKEND_PORT:-8000}:8000'
     volumes:
       - backend_uploads:/app/uploads
 

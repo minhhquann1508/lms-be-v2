@@ -86,6 +86,9 @@ compose pull
 step "Running database migrations"
 compose up --force-recreate migrate
 
+step "Seeding base data safely"
+compose up --force-recreate seed
+
 step "Starting $APP_NAME"
 compose up -d --remove-orphans backend
 
