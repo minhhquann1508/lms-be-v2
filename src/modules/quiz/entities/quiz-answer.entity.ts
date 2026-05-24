@@ -5,6 +5,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -12,6 +13,7 @@ import {
 } from 'typeorm';
 
 @Entity('quiz_answers')
+@Index('IDX_quiz_answers_attempt_id', ['attemptId'])
 export class QuizAnswer {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -51,4 +53,3 @@ export class QuizAnswer {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }
-

@@ -4,6 +4,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -11,6 +12,8 @@ import {
 } from 'typeorm';
 
 @Entity({ name: 'notifications' })
+@Index('IDX_notifications_user_id_created_at', ['userId', 'createdAt'])
+@Index('IDX_notifications_user_id_is_read', ['userId', 'isRead'])
 export class Notification {
   @PrimaryGeneratedColumn('uuid')
   id: string;

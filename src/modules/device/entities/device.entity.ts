@@ -2,11 +2,13 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 
 @Entity('devices')
+@Index('IDX_devices_user_device_uid', ['userId', 'deviceUid'], { unique: true })
 export class Device {
   @PrimaryGeneratedColumn('uuid')
   id: string;

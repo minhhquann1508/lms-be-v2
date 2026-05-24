@@ -4,6 +4,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   OneToMany,
@@ -18,6 +19,8 @@ export enum QuizAttemptStatus {
 }
 
 @Entity('quiz_attempts')
+@Index('IDX_quiz_attempts_user_id', ['userId'])
+@Index('IDX_quiz_attempts_quiz_id', ['quizId'])
 export class QuizAttempt {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -67,4 +70,3 @@ export class QuizAttempt {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }
-

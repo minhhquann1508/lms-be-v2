@@ -3,6 +3,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -10,6 +11,7 @@ import {
 } from 'typeorm';
 
 @Entity('question_options')
+@Index('IDX_question_options_question_id', ['questionId'])
 export class QuestionOption {
   @PrimaryGeneratedColumn('uuid')
   id: string;

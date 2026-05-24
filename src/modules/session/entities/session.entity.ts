@@ -2,11 +2,13 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 
 @Entity('sessions')
+@Index('IDX_sessions_user_status', ['userId', 'status'])
 export class Session {
   @PrimaryGeneratedColumn('uuid')
   id: string;

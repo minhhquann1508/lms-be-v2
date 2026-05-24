@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   DeleteDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   OneToMany,
@@ -13,6 +14,7 @@ import {
 } from 'typeorm';
 
 @Entity('questions')
+@Index('IDX_questions_quiz_id', ['quizId'])
 export class Question {
   @PrimaryGeneratedColumn('uuid')
   id: string;
