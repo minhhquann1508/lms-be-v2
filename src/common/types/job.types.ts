@@ -1,0 +1,11 @@
+export enum JobStatus {
+  PENDING = 'PENDING',
+  PROCESSING = 'PROCESSING',
+  DONE = 'DONE',
+  FAILED = 'FAILED',
+}
+
+export enum JobType {
+  SEND_WELCOME_EMAIL = 'SEND_WELCOME_EMAIL',
+  UPLOAD_LECTURE_VIDEO = 'UPLOAD_LECTURE_VIDEO',
+}
