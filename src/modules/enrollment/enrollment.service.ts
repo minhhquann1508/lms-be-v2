@@ -281,9 +281,9 @@ export class EnrollmentService {
     };
 
     enrollment.learningStateData = this.serializeLearningState(nextState);
-    const savedEnrollment = await this.enrollmentRepository.save(enrollment);
+    await this.enrollmentRepository.save(enrollment);
 
-    return this.mapLearningEnrollmentDetail(savedEnrollment);
+    return this.getDetailEnrollment(enrollmentId, userId);
   }
 
   async getMyEnrollments(
