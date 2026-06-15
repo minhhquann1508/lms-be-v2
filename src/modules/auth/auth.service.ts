@@ -77,7 +77,12 @@ export class AuthService {
       throw new HttpException(ValidationErrorCode.INVALID_PASSWORD, 401);
     }
 
-    return await this.createLoginSession(user, data.device);
+    return await this.createLoginSession(
+      user,
+      data.device,
+      false,
+      data.revokeSessionId,
+    );
   }
 
   async loginWithGoogle(data: GoogleLoginDto): Promise<LoginResponse> {
@@ -87,6 +92,7 @@ export class AuthService {
       profile,
       data.device,
       data.force ?? false,
+      data.revokeSessionId,
     );
   }
 
@@ -102,6 +108,7 @@ export class AuthService {
     profile: IdentityProfile,
     deviceData: CreateDeviceDto,
     force = false,
+    revokeSessionId?: string,
   ): Promise<LoginResponse> {
     let user = await this.userRepository.findOne({
       where: { email: profile.email },
@@ -121,7 +128,12 @@ export class AuthService {
       await this.userRepository.save(user);
     }
 
-    return await this.createLoginSession(user, deviceData, force);
+    return await this.createLoginSession(
+      user,
+      deviceData,
+      force,
+      revokeSessionId,
+    );
   }
 
   async refreshToken(
@@ -219,6 +231,7 @@ export class AuthService {
     user: User,
     deviceData: CreateDeviceDto,
     force = false,
+    revokeSessionId?: string,
   ): Promise<LoginResponse> {
     return await this.dataSource.transaction(async (manager) => {
       // Step 0: Chủ động đánh dấu các session đã hết hạn theo `expired_at` thành 'expired'.
@@ -254,9 +267,28 @@ export class AuthService {
         }
       }
 
+      // Step 3.5: If revokeSessionId is provided, revoke that specific session
+      // before checking device limit. This allows the FE to free a slot by
+      // revoking the earliest active session and then proceeding with login.
+      // When revokeSessionId is valid, skip limit check (same as force).
+      let didRevokeSpecificSession = false;
+      if (revokeSessionId && !force) {
+        const revokeResult = await this.sessionService.revokeById(
+          revokeSessionId,
+          user.id,
+        );
+        if (!revokeResult.existed) {
+          throw new HttpException(
+            ValidationErrorCode.SESSION_NOT_FOUND,
+            HttpStatus.NOT_FOUND,
+          );
+        }
+        didRevokeSpecificSession = true;
+      }
+
       // Step 4: Count active sessions of same deviceType (excluding current device)
-      // Skip limit check when force=true since we already revoked all other sessions above
-      if (!force) {
+      // Skip limit check when force=true or a specific session was just revoked
+      if (!force && !didRevokeSpecificSession) {
         const activeSessionCount =
           await this.sessionService.countActiveSessionsByUserIdAndDeviceType(
             user.id,
@@ -282,6 +314,7 @@ export class AuthService {
               message: ValidationErrorCode.ACCOUNT_IN_USE_ON_ANOTHER_DEVICE,
               details: {
                 activeDevices: activeSessions.map((s) => ({
+                  sessionId: s.id,
                   deviceId: s.device.id,
                   deviceName: s.device.deviceName,
                   deviceType: s.device.deviceType,

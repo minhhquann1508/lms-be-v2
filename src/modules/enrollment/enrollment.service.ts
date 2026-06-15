@@ -102,9 +102,9 @@ export class EnrollmentService {
 
     if (reusableEnrollment) {
       reusableEnrollment.status = EnrollmentStatus.PENDING;
-      reusableEnrollment.notes = notes?.trim() || null;
-      reusableEnrollment.fullName = fullName?.trim() || null;
-      reusableEnrollment.phone = phone?.trim() || null;
+      reusableEnrollment.notes = notes?.trim() ?? null;
+      reusableEnrollment.fullName = fullName?.trim() ?? null;
+      reusableEnrollment.phone = phone?.trim() ?? null;
       reusableEnrollment.progress = 0;
       reusableEnrollment.startAt = new Date();
       reusableEnrollment.completedAt = null;
@@ -122,9 +122,9 @@ export class EnrollmentService {
 
     const enrollment = this.enrollmentRepository.create({
       courseId,
-      notes: notes?.trim() || null,
-      fullName: fullName?.trim() || null,
-      phone: phone?.trim() || null,
+      notes: notes?.trim() ?? null,
+      fullName: fullName?.trim() ?? null,
+      phone: phone?.trim() ?? null,
       userId,
       status: EnrollmentStatus.PENDING,
       startAt: new Date(),
@@ -417,7 +417,9 @@ export class EnrollmentService {
     };
   }
 
-  private async notifyAdminsOnNewEnrollment(enrollment: Enrollment) {
+  private async notifyAdminsOnNewEnrollment(
+    enrollment: Enrollment,
+  ): Promise<void> {
     const admins = await this.userRepository.find({
       where: [{ roleCode: ROLES.ADMIN }, { roleCode: ROLES.SUPER_ADMIN }],
     });
@@ -433,7 +435,7 @@ export class EnrollmentService {
       await this.notificationService.create({
         userId: admin.id,
         title: 'Yêu cầu ghi danh mới',
-        message: `${user?.fullName || 'Học viên'} vừa gửi yêu cầu ghi danh vào "${course?.name || 'khoá học'}".`,
+        message: `${user?.fullName ?? 'Học viên'} vừa gửi yêu cầu ghi danh vào "${course?.name ?? 'khoá học'}".`,
         type: 'enrollment.new',
         link: `/admin/enrollments`,
         relatedEnrollmentId: enrollment.id,
@@ -458,7 +460,7 @@ export class EnrollmentService {
     enrollment.status = payload.status;
     enrollment.reviewedAt = new Date();
     enrollment.reviewedById = reviewerId;
-    enrollment.reviewNote = payload.reviewNote?.trim() || null;
+    enrollment.reviewNote = payload.reviewNote?.trim() ?? null;
     enrollment.approvedAt =
       payload.status === EnrollmentStatus.ACTIVE ? new Date() : null;
 

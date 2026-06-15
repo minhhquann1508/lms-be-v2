@@ -7,6 +7,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@src/common/security/jwt/jwt.service';
 import { IS_PUBLIC_KEY, ValidationErrorCode } from '@src/common/constants';
+import { SessionService } from '@src/modules/session/session.service';
 import { Request } from 'express';
 
 @Injectable()
@@ -14,9 +15,10 @@ export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
     private readonly reflector: Reflector,
+    private readonly sessionService: SessionService,
   ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     // Check if the route is marked as public
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
@@ -36,6 +38,17 @@ export class JwtAuthGuard implements CanActivate {
 
     try {
       const payload = this.jwtService.verifyAccessToken(token);
+
+      // If token has a sessionId, verify the session is still active.
+      // This ensures sessions revoked via force-login / revoke-earliest
+      // take effect immediately rather than waiting for access token expiry.
+      if (payload.sessionId) {
+        const session = await this.sessionService.findById(payload.sessionId);
+        if (!session) {
+          throw new UnauthorizedException(ValidationErrorCode.UNAUTHENTICATED);
+        }
+      }
+
       // Attach the user payload to the request object
       request['user'] = payload;
       return true;
