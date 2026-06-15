@@ -126,10 +126,16 @@ export class AuthController {
     @Res() res: Response,
     @Query('lang') lang?: string,
     @Query('device_uid') deviceUid?: string,
+    @Query('revokeSessionId') revokeSessionId?: string,
   ): void {
-    const state = Buffer.from(
-      JSON.stringify({ lang: lang || 'vi', deviceUid: deviceUid || '' }),
-    ).toString('base64');
+    const statePayload: Record<string, string> = {
+      lang: lang ?? 'vi',
+      deviceUid: deviceUid ?? '',
+    };
+    if (revokeSessionId) {
+      statePayload.revokeSessionId = revokeSessionId;
+    }
+    const state = Buffer.from(JSON.stringify(statePayload)).toString('base64');
     const url = this.authService.getGoogleAuthUrl(state);
 
     res.redirect(url);
@@ -146,6 +152,7 @@ export class AuthController {
   ): Promise<void> {
     let lang = 'vi';
     let deviceUid = '';
+    let revokeSessionId: string | undefined;
 
     if (state) {
       try {
@@ -154,6 +161,7 @@ export class AuthController {
         );
         lang = decodedState.lang ?? 'vi';
         deviceUid = decodedState.deviceUid ?? '';
+        revokeSessionId = decodedState.revokeSessionId;
       } catch (_e: unknown) {
         // Fallback or ignore if state is invalid
         lang = state ?? 'vi'; // In case it was just a string before
@@ -180,6 +188,7 @@ export class AuthController {
 
       const result = await this.authService.loginWithGoogle({
         code,
+        revokeSessionId,
         device: {
           deviceUid: finalDeviceUid,
           deviceName: 'Browser Device',

@@ -38,4 +38,14 @@ export class GoogleLoginDto {
   @IsOptional()
   @IsBoolean({ message: ValidationErrorCode.INVALID_TYPE })
   force?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Revoke a specific session before login (used to free a device slot). ' +
+      'When provided, the session identified by this ID will be revoked prior to device-limit checks.',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @IsOptional()
+  @IsString({ message: ValidationErrorCode.INVALID_TYPE })
+  revokeSessionId?: string;
 }
