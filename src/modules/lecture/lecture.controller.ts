@@ -3,6 +3,8 @@ import {
   Post,
   Body,
   UseGuards,
+  UploadedFile,
+  UseInterceptors,
   BadRequestException,
   Patch,
   Param,
@@ -17,6 +19,7 @@ import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Roles } from '@src/common/decorators';
 import { RolesGuard } from '@src/common/guards';
 import { ROLES } from '@src/common/constants/roles';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ValidationErrorCode } from '@src/common/constants';
 import { PatchLectureDto } from '@src/modules/lecture/dto/patch-lecture.dto';
 import { UpdateLectureDto } from '@src/modules/lecture/dto/update-lecture.dto';
@@ -29,13 +32,15 @@ export class LectureController {
   @UseGuards(RolesGuard)
   @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
   @Post()
+  @UseInterceptors(FileInterceptor('file'))
   @ApiOperation({ summary: 'Create a new lecture' })
   @ApiResponse({ status: 201, description: 'Lecture created successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async create(
     @Body() createLectureDto: CreateLectureDto,
+    @UploadedFile() file?: Express.Multer.File,
   ): Promise<Lecture> {
-    return await this.lectureService.create(createLectureDto);
+    return await this.lectureService.create(createLectureDto, file);
   }
 
   @ApiOperation({ summary: 'Get lecture by id' })
@@ -79,6 +84,7 @@ export class LectureController {
   @UseGuards(RolesGuard)
   @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
   @Put(':lectureId')
+  @UseInterceptors(FileInterceptor('file'))
   @ApiOperation({ summary: 'Update lecture' })
   @ApiResponse({ status: 200, description: 'Lecture updated successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -86,10 +92,12 @@ export class LectureController {
   async updateLecture(
     @Param('lectureId') lectureId: string,
     @Body() updateLectureDto: UpdateLectureDto,
+    @UploadedFile() file?: Express.Multer.File,
   ): Promise<Lecture> {
     return await this.lectureService.updateLecture(
       lectureId,
       updateLectureDto,
+      file,
     );
   }
 

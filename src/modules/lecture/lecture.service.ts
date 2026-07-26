@@ -3,6 +3,10 @@ import { CreateLectureDto } from './dto/create-lecture.dto';
 import { Lecture } from './entities/lecture.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
+import { JobService } from '@src/modules/job/job.service';
+import { JobType } from '@src/common/types';
+import * as path from 'path';
+import * as fs from 'fs/promises';
 import { generateSlug } from '@src/common/helpers';
 import { ValidationErrorCode } from '@src/common/constants';
 import { UpdateLectureDto } from './dto/update-lecture.dto';
@@ -16,9 +20,12 @@ export class LectureService {
     private readonly lectureRepository: Repository<Lecture>,
     @InjectRepository(Quiz)
     private readonly quizRepository: Repository<Quiz>,
+    private readonly jobService: JobService,
   ) {}
+
   async create(
     createLectureDto: CreateLectureDto,
+    file?: Express.Multer.File,
   ): Promise<Lecture> {
     if (!createLectureDto.order) {
       const maxOrderLecture = await this.lectureRepository.findOne({
@@ -32,7 +39,21 @@ export class LectureService {
       ...createLectureDto,
       slug: generateSlug(createLectureDto.name),
     });
-    return this.lectureRepository.save(lecture);
+    const saved = await this.lectureRepository.save(lecture);
+
+    if (file) {
+      const tempDir = path.join(process.cwd(), 'temp');
+      await fs.mkdir(tempDir, { recursive: true });
+      const tempPath = path.join(tempDir, `${Date.now()}-${file.originalname}`);
+      await fs.writeFile(tempPath, file.buffer);
+
+      await this.jobService.addJob(JobType.UPLOAD_LECTURE_VIDEO, {
+        lectureId: saved.id,
+        tempFilePath: tempPath,
+      });
+    }
+
+    return saved;
   }
 
   async findById(lectureId: string): Promise<Lecture> {
@@ -55,12 +76,26 @@ export class LectureService {
   async updateLecture(
     lectureId: string,
     updateLectureDto: UpdateLectureDto,
+    file?: Express.Multer.File,
   ): Promise<Lecture> {
     const lecture = await this.findById(lectureId);
     Object.assign(lecture, {
       ...updateLectureDto,
       slug: generateSlug(updateLectureDto.name ?? lecture.name),
     });
+
+    if (file) {
+      const tempDir = path.join(process.cwd(), 'temp');
+      await fs.mkdir(tempDir, { recursive: true });
+      const tempPath = path.join(tempDir, `${Date.now()}-${file.originalname}`);
+      await fs.writeFile(tempPath, file.buffer);
+
+      await this.jobService.addJob(JobType.UPLOAD_LECTURE_VIDEO, {
+        lectureId: lecture.id,
+        tempFilePath: tempPath,
+      });
+    }
+
     return this.lectureRepository.save(lecture);
   }
 
