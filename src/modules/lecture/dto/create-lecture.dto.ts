@@ -30,4 +30,8 @@ export class CreateLectureDto {
   @IsString()
   @IsOptional()
   quizId?: string;
+
+  @IsString()
+  @IsOptional()
+  videoUrl?: string;
 }

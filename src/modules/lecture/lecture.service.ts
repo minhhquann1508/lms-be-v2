@@ -3,10 +3,6 @@ import { CreateLectureDto } from './dto/create-lecture.dto';
 import { Lecture } from './entities/lecture.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { JobService } from '@src/modules/job/job.service';
-import { JobType } from '@src/common/types';
-import * as path from 'path';
-import * as fs from 'fs/promises';
 import { generateSlug } from '@src/common/helpers';
 import { ValidationErrorCode } from '@src/common/constants';
 import { UpdateLectureDto } from './dto/update-lecture.dto';
@@ -20,15 +16,10 @@ export class LectureService {
     private readonly lectureRepository: Repository<Lecture>,
     @InjectRepository(Quiz)
     private readonly quizRepository: Repository<Quiz>,
-    private readonly jobService: JobService,
   ) {}
   async create(
     createLectureDto: CreateLectureDto,
-    file: Express.Multer.File,
-  ): Promise<{ jobId: string }> {
-    const tempDir = path.join(process.cwd(), 'temp');
-    await fs.mkdir(tempDir, { recursive: true });
-
+  ): Promise<Lecture> {
     if (!createLectureDto.order) {
       const maxOrderLecture = await this.lectureRepository.findOne({
         where: { chapterId: createLectureDto.chapterId },
@@ -37,25 +28,11 @@ export class LectureService {
       createLectureDto.order = (maxOrderLecture?.order ?? 0) + 1;
     }
 
-    const tempPath = path.join(tempDir, `${Date.now()}-${file.originalname}`);
-    await fs.writeFile(tempPath, file.buffer);
-
     const lecture = this.lectureRepository.create({
       ...createLectureDto,
       slug: generateSlug(createLectureDto.name),
-      videoUrl: '',
     });
-    const savedLecture = await this.lectureRepository.save(lecture);
-
-    const job = await this.jobService.addJob(JobType.UPLOAD_LECTURE_VIDEO, {
-      ...createLectureDto,
-      lectureId: savedLecture.id,
-      tempFilePath: tempPath,
-    });
-
-    return {
-      jobId: job.id,
-    };
+    return this.lectureRepository.save(lecture);
   }
 
   async findById(lectureId: string): Promise<Lecture> {
@@ -78,33 +55,13 @@ export class LectureService {
   async updateLecture(
     lectureId: string,
     updateLectureDto: UpdateLectureDto,
-    file?: Express.Multer.File,
-  ): Promise<{ jobId?: string }> {
+  ): Promise<Lecture> {
     const lecture = await this.findById(lectureId);
     Object.assign(lecture, {
       ...updateLectureDto,
       slug: generateSlug(updateLectureDto.name ?? lecture.name),
     });
-    await this.lectureRepository.save(lecture);
-
-    if (file) {
-      const tempDir = path.join(process.cwd(), 'temp');
-      await fs.mkdir(tempDir, { recursive: true });
-
-      const tempPath = path.join(tempDir, `${Date.now()}-${file.originalname}`);
-      await fs.writeFile(tempPath, file.buffer);
-
-      const job = await this.jobService.addJob(JobType.UPLOAD_LECTURE_VIDEO, {
-        lectureId: lecture.id,
-        tempFilePath: tempPath,
-      });
-
-      return {
-        jobId: job.id,
-      };
-    }
-
-    return {};
+    return this.lectureRepository.save(lecture);
   }
 
   async reorderLectures(dto: ReorderLecturesDto): Promise<void> {
