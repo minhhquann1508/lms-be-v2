@@ -19,6 +19,7 @@ import { NotificationService } from '@src/modules/notification/notification.serv
 import { User } from '@src/modules/user/entities/user.entity';
 import { Repository } from 'typeorm';
 import { CreateEnrollmentDto } from './dto/create-enrollment.dto';
+import { DirectEnrollDto } from './dto/direct-enroll.dto';
 import { ReviewEnrollmentDto } from './dto/review-enrollment.dto';
 import { UpdateEnrollmentLearningStateDto } from './dto/update-enrollment-learning-state.dto';
 import { Enrollment } from './entities/enrollment.entity';
@@ -138,6 +139,72 @@ export class EnrollmentService {
     const savedEnrollment = await this.enrollmentRepository.save(enrollment);
     await this.notifyAdminsOnNewEnrollment(savedEnrollment);
     return savedEnrollment;
+  }
+
+  async directEnroll(
+    dto: DirectEnrollDto,
+    adminId: string,
+  ): Promise<{ created: number; skipped: number; enrollments: Enrollment[] }> {
+    const course = await this.courseRepository.findOne({
+      where: { id: dto.courseId },
+    });
+
+    if (!course || course.deletedAt) {
+      throw new NotFoundException(ValidationErrorCode.COURSE_NOT_FOUND);
+    }
+
+    const users = await this.userRepository
+      .createQueryBuilder('user')
+      .where('user.id IN (:...ids)', { ids: dto.userIds })
+      .getMany();
+
+    const foundUserIds = new Set(users.map((u) => u.id));
+    const enrollments: Enrollment[] = [];
+    let created = 0;
+    let skipped = 0;
+
+    for (const userId of dto.userIds) {
+      if (!foundUserIds.has(userId)) {
+        skipped++;
+        continue;
+      }
+
+      const existing = await this.enrollmentRepository.findOne({
+        where: { userId, courseId: dto.courseId, status: EnrollmentStatus.ACTIVE },
+      });
+
+      if (existing) {
+        skipped++;
+        continue;
+      }
+
+      const enrollment = this.enrollmentRepository.create({
+        userId,
+        courseId: dto.courseId,
+        status: EnrollmentStatus.ACTIVE,
+        progress: 0,
+        startAt: new Date(),
+        approvedAt: new Date(),
+        reviewedById: adminId,
+      });
+
+      const saved = await this.enrollmentRepository.save(enrollment);
+      enrollments.push(saved);
+      created++;
+
+      const user = users.find((u) => u.id === userId);
+      if (user) {
+        await this.notificationService.create({
+          userId,
+          type: 'enrollment.direct',
+          title: 'Đã được thêm vào khoá học',
+          message: `Bạn đã được thêm vào khoá học **${course.name}**. Bắt đầu học ngay!`,
+          relatedEnrollmentId: saved.id,
+        });
+      }
+    }
+
+    return { created, skipped, enrollments };
   }
 
   async findById(enrollmentId: string): Promise<Enrollment> {

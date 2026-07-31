@@ -38,10 +38,8 @@ export class LectureController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async create(
     @Body() createLectureDto: CreateLectureDto,
-    @UploadedFile() file: Express.Multer.File,
-  ): Promise<{ jobId: string }> {
-    if (!file)
-      throw new BadRequestException(ValidationErrorCode.LECTURE_FILE_REQUIRED);
+    @UploadedFile() file?: Express.Multer.File,
+  ): Promise<Lecture> {
     return await this.lectureService.create(createLectureDto, file);
   }
 
@@ -94,8 +92,8 @@ export class LectureController {
   async updateLecture(
     @Param('lectureId') lectureId: string,
     @Body() updateLectureDto: UpdateLectureDto,
-    @UploadedFile() file: Express.Multer.File,
-  ): Promise<{ jobId?: string }> {
+    @UploadedFile() file?: Express.Multer.File,
+  ): Promise<Lecture> {
     return await this.lectureService.updateLecture(
       lectureId,
       updateLectureDto,

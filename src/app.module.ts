@@ -25,6 +25,7 @@ import { EmailModule } from './modules/email/email.module';
 import { CategoryModule } from './modules/category/category.module';
 import { PublicModule } from './modules/public/public.module';
 import { QuizModule } from './modules/quiz/quiz.module';
+import { SiteSettingModule } from './modules/site-setting/site-setting.module';
 
 @Module({
   imports: [
@@ -72,6 +73,7 @@ import { QuizModule } from './modules/quiz/quiz.module';
     CategoryModule,
     PublicModule,
     QuizModule,
+    SiteSettingModule,
   ],
   controllers: [],
   providers: [

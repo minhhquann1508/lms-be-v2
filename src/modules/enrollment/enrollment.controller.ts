@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { EnrollmentService } from './enrollment.service';
 import { CreateEnrollmentDto } from './dto/create-enrollment.dto';
+import { DirectEnrollDto } from './dto/direct-enroll.dto';
 import { Enrollment } from './entities/enrollment.entity';
 import { CurrentUser, Roles } from '@src/common/decorators';
 import { RolesGuard } from '@src/common/guards';
@@ -46,6 +47,21 @@ export class EnrollmentController {
       createEnrollmentDto,
       user.userId,
     );
+  }
+
+  @UseGuards(RolesGuard)
+  @Roles(ROLES.SUPER_ADMIN, ROLES.ADMIN)
+  @Post('direct')
+  @ApiOperation({ summary: 'Directly enroll users into a course (bypasses approval)' })
+  @ApiResponse({
+    status: 201,
+    description: 'Users have been directly enrolled.',
+  })
+  async directEnroll(
+    @Body() dto: DirectEnrollDto,
+    @CurrentUser() user: AccessTokenPayload,
+  ) {
+    return this.enrollmentService.directEnroll(dto, user.userId);
   }
 
   // @UseGuards(RolesGuard)

@@ -22,13 +22,11 @@ export class LectureService {
     private readonly quizRepository: Repository<Quiz>,
     private readonly jobService: JobService,
   ) {}
+
   async create(
     createLectureDto: CreateLectureDto,
-    file: Express.Multer.File,
-  ): Promise<{ jobId: string }> {
-    const tempDir = path.join(process.cwd(), 'temp');
-    await fs.mkdir(tempDir, { recursive: true });
-
+    file?: Express.Multer.File,
+  ): Promise<Lecture> {
     if (!createLectureDto.order) {
       const maxOrderLecture = await this.lectureRepository.findOne({
         where: { chapterId: createLectureDto.chapterId },
@@ -37,25 +35,25 @@ export class LectureService {
       createLectureDto.order = (maxOrderLecture?.order ?? 0) + 1;
     }
 
-    const tempPath = path.join(tempDir, `${Date.now()}-${file.originalname}`);
-    await fs.writeFile(tempPath, file.buffer);
-
     const lecture = this.lectureRepository.create({
       ...createLectureDto,
       slug: generateSlug(createLectureDto.name),
-      videoUrl: '',
     });
-    const savedLecture = await this.lectureRepository.save(lecture);
+    const saved = await this.lectureRepository.save(lecture);
 
-    const job = await this.jobService.addJob(JobType.UPLOAD_LECTURE_VIDEO, {
-      ...createLectureDto,
-      lectureId: savedLecture.id,
-      tempFilePath: tempPath,
-    });
+    if (file) {
+      const tempDir = path.join(process.cwd(), 'temp');
+      await fs.mkdir(tempDir, { recursive: true });
+      const tempPath = path.join(tempDir, `${Date.now()}-${file.originalname}`);
+      await fs.writeFile(tempPath, file.buffer);
 
-    return {
-      jobId: job.id,
-    };
+      await this.jobService.addJob(JobType.UPLOAD_LECTURE_VIDEO, {
+        lectureId: saved.id,
+        tempFilePath: tempPath,
+      });
+    }
+
+    return saved;
   }
 
   async findById(lectureId: string): Promise<Lecture> {
@@ -79,32 +77,26 @@ export class LectureService {
     lectureId: string,
     updateLectureDto: UpdateLectureDto,
     file?: Express.Multer.File,
-  ): Promise<{ jobId?: string }> {
+  ): Promise<Lecture> {
     const lecture = await this.findById(lectureId);
     Object.assign(lecture, {
       ...updateLectureDto,
       slug: generateSlug(updateLectureDto.name ?? lecture.name),
     });
-    await this.lectureRepository.save(lecture);
 
     if (file) {
       const tempDir = path.join(process.cwd(), 'temp');
       await fs.mkdir(tempDir, { recursive: true });
-
       const tempPath = path.join(tempDir, `${Date.now()}-${file.originalname}`);
       await fs.writeFile(tempPath, file.buffer);
 
-      const job = await this.jobService.addJob(JobType.UPLOAD_LECTURE_VIDEO, {
+      await this.jobService.addJob(JobType.UPLOAD_LECTURE_VIDEO, {
         lectureId: lecture.id,
         tempFilePath: tempPath,
       });
-
-      return {
-        jobId: job.id,
-      };
     }
 
-    return {};
+    return this.lectureRepository.save(lecture);
   }
 
   async reorderLectures(dto: ReorderLecturesDto): Promise<void> {
