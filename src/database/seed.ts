@@ -10,6 +10,7 @@ import { Lecture } from '../modules/lecture/entities/lecture.entity';
 import { QuestionOption } from '../modules/quiz/entities/question-option.entity';
 import { Question } from '../modules/quiz/entities/question.entity';
 import { Quiz } from '../modules/quiz/entities/quiz.entity';
+import { SiteSetting } from '../modules/site-setting/entities/site-setting.entity';
 import { User } from '../modules/user/entities/user.entity';
 
 type SeedUser = {
@@ -515,6 +516,41 @@ async function seedBaseQuizzes(courses: Course[]): Promise<void> {
   }
 }
 
+async function seedBaseSiteSettings(): Promise<void> {
+  const siteSettingRepository = AppDataSource.getRepository(SiteSetting);
+
+  const existing = await siteSettingRepository
+    .createQueryBuilder('site_settings')
+    .orderBy('site_settings.createdAt', 'ASC')
+    .getOne();
+
+  if (existing) {
+    console.log('Site settings already exist, skipping seed.');
+    return;
+  }
+
+  const defaults = siteSettingRepository.create({
+    heroTitle: 'Phát triển bản thân mỗi ngày\nvới khoá học chất lượng',
+    heroSubtitle: 'Nền tảng học tập số 1 Việt Nam',
+    heroDescription:
+      'Hàng trăm khoá học online từ cơ bản đến nâng cao, giúp bạn thành thạo kỹ năng mới một cách nhanh chóng và hiệu quả.',
+    heroShowStats: true,
+    ctaTitle: 'Sẵn sàng bắt đầu hành trình học tập?',
+    ctaDescription:
+      'Tham gia cùng hàng ngàn học viên đang nâng cao kỹ năng mỗi ngày.\nTất cả hoàn toàn miễn phí — không rủi ro, không cam kết.',
+    ctaButtonText: 'Khám phá ngay',
+    footerBrandName: 'LMS Platform',
+    footerCopyright: '© {year} LMS Platform. All rights reserved.',
+    footerLinks: [
+      { label: 'Trang chủ', url: '/' },
+      { label: 'Khoá học', url: '/' },
+    ],
+  });
+
+  await siteSettingRepository.save(defaults);
+  console.log('Site settings seeded with defaults.');
+}
+
 async function seed(): Promise<void> {
   await AppDataSource.initialize();
 
@@ -523,6 +559,7 @@ async function seed(): Promise<void> {
     const categories = await seedBaseCategories();
     const courses = await seedBaseCourses(admin, categories);
     await seedBaseQuizzes(courses);
+    await seedBaseSiteSettings();
 
     console.log('Seed completed safely.');
     console.log(
