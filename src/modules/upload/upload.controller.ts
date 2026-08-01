@@ -22,6 +22,7 @@ import { extname, join } from 'path';
 import { Request } from 'express';
 import { randomUUID } from 'crypto';
 import { JwtAuthGuard } from '@src/common/guards';
+import { buildUploadUrl } from './upload-url.util';
 
 const uploadsDir = join(process.cwd(), 'uploads');
 
@@ -83,10 +84,7 @@ export class UploadController {
       throw new BadRequestException('Image file is required');
     }
 
-    const protocolHeader = req.headers['x-forwarded-proto'];
-    const protocol =
-      typeof protocolHeader === 'string' ? protocolHeader : req.protocol;
-    const fileUrl = `${protocol}://${req.get('host')}/uploads/${file.filename}`;
+    const fileUrl = buildUploadUrl(req, file.filename);
 
     return {
       url: fileUrl,
