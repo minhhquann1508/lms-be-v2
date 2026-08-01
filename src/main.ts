@@ -13,6 +13,7 @@ import { assertOAuthStateSecret } from '@src/common/helpers/assert-oauth-state-s
 import cookieParser from 'cookie-parser';
 import { existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import { UPLOADS_STATIC_PREFIXES } from '@src/modules/upload/upload-url.util';
 
 // Re-export for backward compatibility with existing tests
 export { assertOAuthStateSecret } from '@src/common/helpers/assert-oauth-state-secret';
@@ -50,9 +51,9 @@ async function bootstrap(): Promise<void> {
   );
 
   app.use(cookieParser());
-  app.useStaticAssets(uploadsDir, {
-    prefix: '/uploads/',
-  });
+  for (const prefix of UPLOADS_STATIC_PREFIXES) {
+    app.useStaticAssets(uploadsDir, { prefix });
+  }
 
   app.useGlobalInterceptors(
     new ClassSerializerInterceptor(app.get(Reflector)),
